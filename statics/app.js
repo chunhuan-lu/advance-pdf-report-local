@@ -230,7 +230,7 @@ function fromBackend(id, data) {
 async function api(path, opts = {}) {
   const resp = await fetch(path, opts);
   const body = await resp.json();
-  if (!body.success) throw new Error(body.msg || "请求失败");
+  if (!body.success) throw new Error(body.msg || "Request failed");
   return body.data;
 }
 
@@ -250,8 +250,8 @@ createApp({
     steps() {
       if (!this.rpt) return [];
       return this.rpt.type === "smoke"
-        ? ["基本信息", "声明与结论", "烟感器"]
-        : ["基本信息", "总体结论", "设备明细", "检测明细", "安装检查", "照片报告"];
+        ? ["Basic Info", "Declarations", "Smoke Alarms"]
+        : ["Basic Info", "Overall Findings", "Appliances", "Service & Inspection", "Installation", "Photo Report"];
     },
     curStep() { return this.steps[this.stepIdx] || ""; },
   },
@@ -268,7 +268,7 @@ createApp({
 
     async loadReports() {
       try { this.reports = await api("/api/reports/"); }
-      catch (e) { this.say("加载报告列表失败: " + e.message, true); }
+      catch (e) { this.say("Failed to load reports: " + e.message, true); }
     },
     newReport(type) {
       this.rpt = type === "smoke" ? newSmoke(uid()) : newGas(uid());
@@ -286,7 +286,7 @@ createApp({
       finally { this.busy = false; }
     },
     async delReport(id) {
-      if (!confirm("确定删除这份报告？")) return;
+      if (!confirm("Delete this report?")) return;
       try {
         await api(`/api/reports/${id}/`, { method: "DELETE" });
         this.loadReports();
@@ -300,8 +300,8 @@ createApp({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: this.rpt.id, data: toBackend(this.rpt) }),
         });
-        this.say("✅ 草稿已保存");
-      } catch (e) { this.say("保存失败: " + e.message, true); }
+        this.say("✅ Draft saved");
+      } catch (e) { this.say("Save failed: " + e.message, true); }
       finally { this.busy = false; }
     },
 
@@ -321,8 +321,8 @@ createApp({
         fd.append("key", `${this.rpt.id}/${target.slotId}`);
         target.photoUrl = await api("/api/photos/", { method: "POST", body: fd });
         this.imgBust = Date.now();  // 覆盖上传后强制刷新缩略图
-        this.say("📷 照片已上传");
-      } catch (e) { this.say("上传失败: " + e.message, true); }
+        this.say("📷 Photo uploaded");
+      } catch (e) { this.say("Upload failed: " + e.message, true); }
       finally { this.busy = false; }
     },
 
@@ -336,13 +336,13 @@ createApp({
         });
         if (!resp.ok || !(resp.headers.get("Content-Type") || "").includes("pdf")) {
           const body = await resp.json().catch(() => ({}));
-          throw new Error(body.msg || `生成失败 (${resp.status})`);
+          throw new Error(body.msg || `Generation failed (${resp.status})`);
         }
         const blob = await resp.blob();
         if (this.previewUrl) URL.revokeObjectURL(this.previewUrl);
         this.previewUrl = URL.createObjectURL(blob);
         this.view = "preview";
-      } catch (e) { this.say("预览失败: " + e.message, true); }
+      } catch (e) { this.say("Preview failed: " + e.message, true); }
       finally { this.busy = false; }
     },
 
@@ -360,9 +360,9 @@ createApp({
         document.body.appendChild(a);
         a.click();
         a.remove();
-        this.say("✅ PDF 已生成并开始下载");
+        this.say("✅ PDF generated, download started");
         this.loadReports();
-      } catch (e) { this.say("生成失败: " + e.message, true); }
+      } catch (e) { this.say("Generation failed: " + e.message, true); }
       finally { this.busy = false; }
     },
 
@@ -378,8 +378,10 @@ createApp({
         this.rpt = fromBackend(uid(), res.data);
         this.stepIdx = 0;
         this.view = "edit";
-        this.say(res.source === "embedded" ? "✅ 已从 PDF 内嵌数据恢复" : "✅ 已解析 PDF 表单字段，请核对后再导出");
-      } catch (e) { this.say("解析失败: " + e.message, true); }
+        this.say(res.source === "embedded"
+          ? "✅ Restored from data embedded in the PDF"
+          : "✅ Parsed PDF form fields — please review before exporting");
+      } catch (e) { this.say("Import failed: " + e.message, true); }
       finally { this.busy = false; }
     },
   },

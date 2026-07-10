@@ -130,7 +130,8 @@ class ParsePdf(APIView):
                 data = parse_template_pdf(pdf_file, photo_saver=storage.save_photo_bytes)
                 source = 'acroform'
             if data is None:
-                return _fail("这个 PDF 里既没有嵌入数据，也不是可识别的表单模板，无法解析")
+                return _fail("This PDF has no embedded data and is not a recognizable "
+                             "form template, so it cannot be imported")
             return _ok({"data": data, "source": source})
         except Exception as e:
             traceback.print_exc()
