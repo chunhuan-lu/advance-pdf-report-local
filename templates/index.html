@@ -1,0 +1,308 @@
+{% load static %}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Advance Report Studio</title>
+<link rel="stylesheet" href="{% static 'app.css' %}">
+</head>
+<body>
+{% verbatim %}
+<div id="app">
+  <header class="topbar">
+    <div class="brand" @click="goHome">📋 Advance Report Studio</div>
+    <div class="topbar-right" v-if="view==='edit'">
+      <button class="btn ghost" @click="saveDraft" :disabled="busy">💾 保存草稿</button>
+      <button class="btn primary" @click="doPreview" :disabled="busy">👁 预览 PDF</button>
+    </div>
+  </header>
+
+  <div class="toast" v-if="toast" :class="toastType">{{ toast }}</div>
+
+  <!-- ===================== 首页 ===================== -->
+  <main v-if="view==='home'" class="page">
+    <div class="hero">
+      <button class="bigbtn gas" @click="newReport('gas')">🔥<br>新建 Gas 报告</button>
+      <button class="bigbtn smoke" @click="newReport('smoke')">🚨<br>新建 Smoke Alarm 报告</button>
+      <label class="bigbtn import">
+        📂<br>导入 PDF 再编辑
+        <input type="file" accept="application/pdf" @change="importPdf" hidden>
+      </label>
+    </div>
+
+    <h2 class="section-title">历史报告</h2>
+    <div v-if="reports.length===0" class="empty">还没有报告，点上面按钮新建一份</div>
+    <div class="report-card" v-for="r in reports" :key="r.id">
+      <div class="report-info" @click="openReport(r.id)">
+        <span class="tag" :class="r.type">{{ r.type==='smoke' ? 'Smoke' : 'Gas' }}</span>
+        <div>
+          <div class="report-addr">{{ r.propertyAddress || '（未填地址）' }}</div>
+          <div class="report-meta">{{ r.referenceId || '（未填 Reference）' }} · {{ fmtTime(r.updatedAt) }}</div>
+        </div>
+      </div>
+      <div class="report-actions">
+        <a v-if="r.pdfUrl" class="btn ghost small" :href="r.pdfUrl" target="_blank">PDF</a>
+        <button class="btn ghost small" @click="openReport(r.id)">编辑</button>
+        <button class="btn danger small" @click="delReport(r.id)">删除</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===================== 编辑页 ===================== -->
+  <main v-if="view==='edit'" class="page">
+    <nav class="steps">
+      <button v-for="(s,i) in steps" :key="i" class="step"
+              :class="{active: stepIdx===i}" @click="stepIdx=i">{{ i+1 }}. {{ s }}</button>
+    </nav>
+
+    <!-- ============ 通用：基本信息 ============ -->
+    <section v-show="curStep==='基本信息'" class="card">
+      <h3>基本信息</h3>
+      <div class="grid2">
+        <label>Client / 中介名称
+          <input v-model="rpt.base.agentName" placeholder="Woodards Camberwell">
+        </label>
+        <label>Client 地址
+          <input v-model="rpt.base.branchAddress" placeholder="3/277 Camberwell Road ...">
+        </label>
+        <label>Reference ID
+          <input v-model="rpt.base.referenceId" placeholder="woodar-6119 - JN 9611">
+        </label>
+        <label>Property Address
+          <input v-model="rpt.base.propertyAddress">
+        </label>
+        <label>Property Type
+          <div class="radio-row">
+            <label class="radio"><input type="radio" value="Rental Property" v-model="rpt.base.rentalType"> Rental Property</label>
+            <label class="radio"><input type="radio" value="Rooming House" v-model="rpt.base.rentalType"> Rooming House</label>
+          </div>
+        </label>
+        <label v-if="rpt.type==='smoke'">Building Class
+          <input v-model="rpt.base.buildingClass" placeholder="Class 1a">
+        </label>
+        <label>Inspected Date
+          <input type="date" v-model="rpt.base.inspectedDate">
+        </label>
+        <label>Next Check Due
+          <input type="date" v-model="rpt.base.nextCheckDue">
+        </label>
+        <label>Inspector
+          <input v-model="rpt.base.inspectorName">
+        </label>
+        <label>Licence No.
+          <input v-model="rpt.base.inspectorLicence">
+        </label>
+        <template v-if="rpt.type==='smoke'">
+          <label>Company
+            <input v-model="rpt.base.companyName">
+          </label>
+          <label>Company 地址
+            <input v-model="rpt.base.companyAddress">
+          </label>
+        </template>
+      </div>
+    </section>
+
+    <!-- ============ GAS：总体结论 ============ -->
+    <section v-if="rpt.type==='gas'" v-show="curStep==='总体结论'" class="card">
+      <h3>Overall Findings</h3>
+      <div class="finding" v-for="(f,i) in rpt.overall" :key="i">
+        <div class="finding-label">{{ f.label.replace('\n',' ') }}</div>
+        <div class="radio-row">
+          <label class="radio" v-for="opt in f.options" :key="opt">
+            <input type="radio" :name="'ov'+i" :value="opt" v-model="f.ticked"> {{ opt }}
+          </label>
+        </div>
+        <input v-model="f.remark" placeholder="备注（可留空）">
+      </div>
+    </section>
+
+    <!-- ============ GAS：设备明细 ============ -->
+    <section v-if="rpt.type==='gas'" v-show="curStep==='设备明细'" class="card">
+      <h3>Appliance Details <span class="hint">（对应表格第一部分）</span></h3>
+      <div class="item-card" v-for="(a,i) in rpt.appliances" :key="i">
+        <div class="item-head">设备 {{ i+1 }} <button class="btn danger small" @click="rpt.appliances.splice(i,1)">删除</button></div>
+        <div class="grid2">
+          <label>Type
+            <input v-model="a.type" list="dl-gastype">
+          </label>
+          <label>Location
+            <input v-model="a.location" list="dl-location">
+          </label>
+          <label>Manufacturer
+            <input v-model="a.manufacturer" list="dl-manu">
+          </label>
+          <label>Model No.
+            <input v-model="a.modelNo" placeholder="N/A">
+          </label>
+          <label>Serial No.
+            <input v-model="a.serialNo" placeholder="N/A">
+          </label>
+          <label>Flue Type
+            <input v-model="a.flueType" list="dl-flue" placeholder="N/A">
+          </label>
+          <label>Installation
+            <select v-model="a.installation">
+              <option>Compliant</option><option>Non-Compliant</option><option value="">--</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <button class="btn ghost" @click="addAppliance">＋ 添加设备</button>
+    </section>
+
+    <!-- ============ GAS：检测明细 ============ -->
+    <section v-if="rpt.type==='gas'" v-show="curStep==='检测明细'" class="card">
+      <h3>Service & Inspection Details</h3>
+      <div class="item-card" v-for="(s,i) in rpt.service" :key="i">
+        <div class="item-head">第 {{ i+1 }} 行 <button class="btn danger small" @click="rpt.service.splice(i,1)">删除</button></div>
+        <div class="grid2">
+          <label>Operating Pressure (KPA)
+            <input v-model="s.kpa">
+          </label>
+          <label>Ventilation
+            <select v-model="s.ventilation"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          </label>
+          <label>Flue Visual
+            <select v-model="s.flueVisual"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          </label>
+          <label>Flue Operation
+            <select v-model="s.flueOperation"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          </label>
+          <label>Carbon Monoxide Test
+            <select v-model="s.carbonMonoxideTest"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          </label>
+          <label>Safe To Use
+            <select v-model="s.safeToUse"><option v-for="o in OPT.ynn" :key="o">{{o}}</option><option value="">--</option></select>
+          </label>
+        </div>
+      </div>
+      <button class="btn ghost" @click="addService">＋ 添加一行</button>
+
+      <h3 style="margin-top:24px">Carbon Monoxide Alarm Details</h3>
+      <div class="grid2">
+        <label>Approved Alarm Fitted <input v-model="rpt.carbon.fitted"></label>
+        <label>Alarm Test <input v-model="rpt.carbon.test"></label>
+        <label>No. Appliances Tested <input v-model="rpt.carbon.tested"></label>
+      </div>
+    </section>
+
+    <!-- ============ GAS：安装检查 ============ -->
+    <section v-if="rpt.type==='gas'" v-show="curStep==='安装检查'" class="card">
+      <h3>Installation Details <span class="hint">（8 项固定检查）</span></h3>
+      <div class="finding" v-for="item in rpt.installation" :key="item.order">
+        <div class="finding-label">{{ item.order }}. {{ item.label }}<br><span class="hint">{{ item.description }}</span></div>
+        <div class="radio-row">
+          <label class="radio"><input type="radio" :name="'ins'+item.order" value="Pass" v-model="item.value"> Pass</label>
+          <label class="radio"><input type="radio" :name="'ins'+item.order" value="Fail" v-model="item.value"> Fail</label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ GAS：照片报告 ============ -->
+    <section v-if="rpt.type==='gas'" v-show="curStep==='照片报告'" class="card">
+      <h3>Gas Appliance Report <span class="hint">（每项一张照片，重传自动覆盖）</span></h3>
+      <div class="item-card" v-for="(p,i) in rpt.photoBlocks" :key="p.slotId">
+        <div class="item-head">照片项 {{ i+1 }} <button class="btn danger small" @click="rpt.photoBlocks.splice(i,1)">删除</button></div>
+        <div class="grid2">
+          <label>标题（设备名）
+            <input v-model="p.title" placeholder="Cooktop / Gas meter ...">
+          </label>
+          <label>结论
+            <div class="radio-row">
+              <label class="radio"><input type="radio" :name="'pb'+p.slotId" value="Compliant" v-model="p.status"> Compliant</label>
+              <label class="radio"><input type="radio" :name="'pb'+p.slotId" value="Non-Compliant" v-model="p.status"> Non-Compliant</label>
+            </div>
+          </label>
+          <label class="span2">备注
+            <input v-model="p.remark">
+          </label>
+        </div>
+        <div class="photo-box">
+          <img v-if="p.photoUrl" :src="imgSrc(p.photoUrl)" alt="photo">
+          <label class="btn ghost">
+            {{ p.photoUrl ? '重新上传（覆盖）' : '📷 上传 / 拍照' }}
+            <input type="file" accept="image/*" hidden @change="e => uploadPhoto(e, p)">
+          </label>
+        </div>
+      </div>
+      <button class="btn ghost" @click="addPhotoBlock">＋ 添加照片项</button>
+    </section>
+
+    <!-- ============ SMOKE：声明与结论 ============ -->
+    <section v-if="rpt.type==='smoke'" v-show="curStep==='声明与结论'" class="card">
+      <h3>声明</h3>
+      <label class="check-line"><input type="checkbox" v-model="rpt.metCurrent">
+        On the Inspection Date … the smoke alarms <b>Met the Current Requirements.</b></label>
+      <label class="check-line"><input type="checkbox" v-model="rpt.metNew">
+        On the Inspection Date … the smoke alarms <b>Met the New Requirements.</b></label>
+      <h3 style="margin-top:20px">Smoke Alarms 总体结论</h3>
+      <div class="radio-row">
+        <label class="radio"><input type="radio" value="Compliant" v-model="rpt.overallCompliant"> ✅ Compliant</label>
+        <label class="radio"><input type="radio" value="Non-Compliant" v-model="rpt.overallCompliant"> ❌ Non-Compliant</label>
+      </div>
+    </section>
+
+    <!-- ============ SMOKE：烟感器 ============ -->
+    <section v-if="rpt.type==='smoke'" v-show="curStep==='烟感器'" class="card">
+      <h3>烟感器列表 <span class="hint">（数量不限，PDF 每 3 个一组排版）</span></h3>
+      <div class="item-card" v-for="(a,i) in rpt.alarms" :key="a.slotId">
+        <div class="item-head">Smoke {{ i+1 }} <button class="btn danger small" @click="rpt.alarms.splice(i,1)">删除</button></div>
+        <div class="grid2">
+          <label>Brand
+            <input v-model="a.brand" list="dl-brand">
+          </label>
+          <label>Location
+            <input v-model="a.location" placeholder="hallway">
+          </label>
+          <label>Expiry
+            <input v-model="a.expiry" placeholder="2030">
+          </label>
+          <label>结论
+            <div class="radio-row">
+              <label class="radio"><input type="radio" :name="'al'+a.slotId" value="Compliant" v-model="a.status"> Compliant</label>
+              <label class="radio"><input type="radio" :name="'al'+a.slotId" value="Non-Compliant" v-model="a.status"> Non-Compliant</label>
+            </div>
+          </label>
+        </div>
+        <div class="photo-box">
+          <img v-if="a.photoUrl" :src="imgSrc(a.photoUrl)" alt="photo">
+          <label class="btn ghost">
+            {{ a.photoUrl ? '重新上传（覆盖）' : '📷 上传 / 拍照' }}
+            <input type="file" accept="image/*" hidden @change="e => uploadPhoto(e, a)">
+          </label>
+        </div>
+      </div>
+      <button class="btn ghost" @click="addAlarm">＋ 添加烟感器</button>
+    </section>
+
+    <div class="step-nav">
+      <button class="btn ghost" @click="stepIdx--" :disabled="stepIdx===0">← 上一步</button>
+      <button v-if="stepIdx<steps.length-1" class="btn primary" @click="stepIdx++">下一步 →</button>
+      <button v-else class="btn primary" @click="doPreview" :disabled="busy">👁 预览 PDF</button>
+    </div>
+
+    <datalist id="dl-gastype"><option v-for="o in OPT.gasTypes" :key="o" :value="o"></option></datalist>
+    <datalist id="dl-location"><option v-for="o in OPT.locations" :key="o" :value="o"></option></datalist>
+    <datalist id="dl-manu"><option v-for="o in OPT.manufacturers" :key="o" :value="o"></option></datalist>
+    <datalist id="dl-flue"><option v-for="o in OPT.flues" :key="o" :value="o"></option></datalist>
+    <datalist id="dl-brand"><option v-for="o in OPT.brands" :key="o" :value="o"></option></datalist>
+  </main>
+
+  <!-- ===================== 预览页 ===================== -->
+  <main v-if="view==='preview'" class="page preview-page">
+    <div class="preview-bar">
+      <button class="btn ghost" @click="view='edit'">← 返回编辑</button>
+      <a class="btn ghost" :href="previewUrl" target="_blank">↗ 新窗口打开</a>
+      <button class="btn primary" @click="doDownload" :disabled="busy">⬇ 确认无误，下载 PDF</button>
+    </div>
+    <iframe v-if="previewUrl" :src="previewUrl" class="preview-frame"></iframe>
+  </main>
+
+  <div class="loading" v-if="busy">⏳ 处理中…</div>
+</div>
+{% endverbatim %}
+<script src="{% static 'vendor/vue.global.prod.js' %}"></script>
+<script src="{% static 'app.js' %}"></script>
+</body>
+</html>
