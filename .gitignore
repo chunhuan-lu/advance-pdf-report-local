@@ -5,3 +5,4 @@ local_store/
 .idea/
 .vscode/
 *.log
+data/
