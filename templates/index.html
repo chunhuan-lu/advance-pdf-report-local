@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Advance Report Studio</title>
-<link rel="stylesheet" href="{% static 'app.css' %}?v=5">
+<link rel="stylesheet" href="{% static 'app.css' %}?v=6">
 </head>
 <body>
 {% verbatim %}
@@ -128,13 +128,13 @@
         <div class="item-head">Appliance {{ i+1 }} <button class="btn danger small" @click="rpt.appliances.splice(i,1)">Remove</button></div>
         <div class="grid2">
           <label>Type
-            <input v-model="a.type" list="dl-gastype">
+            <combo-box v-model="a.type" :options="OPT.gasTypes"></combo-box>
           </label>
           <label>Location
-            <input v-model="a.location" list="dl-location">
+            <combo-box v-model="a.location" :options="OPT.locations"></combo-box>
           </label>
           <label>Manufacturer
-            <input v-model="a.manufacturer" list="dl-manu">
+            <combo-box v-model="a.manufacturer" :options="OPT.manufacturers"></combo-box>
           </label>
           <label>Model No.
             <input v-model="a.modelNo" placeholder="N/A">
@@ -143,12 +143,10 @@
             <input v-model="a.serialNo" placeholder="N/A">
           </label>
           <label>Flue Type
-            <input v-model="a.flueType" list="dl-flue" placeholder="N/A">
+            <combo-box v-model="a.flueType" :options="OPT.flues" placeholder="N/A"></combo-box>
           </label>
           <label>Installation
-            <select v-model="a.installation">
-              <option>Compliant</option><option>Non-Compliant</option><option value="">--</option>
-            </select>
+            <combo-box v-model="a.installation" :options="OPT.compliance"></combo-box>
           </label>
         </div>
       </div>
@@ -165,19 +163,19 @@
             <input v-model="s.kpa">
           </label>
           <label>Ventilation
-            <select v-model="s.ventilation"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+            <combo-box v-model="s.ventilation" :options="OPT.pfn"></combo-box>
           </label>
           <label>Flue Visual
-            <select v-model="s.flueVisual"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+            <combo-box v-model="s.flueVisual" :options="OPT.pfn"></combo-box>
           </label>
           <label>Flue Operation
-            <select v-model="s.flueOperation"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+            <combo-box v-model="s.flueOperation" :options="OPT.pfn"></combo-box>
           </label>
           <label>Carbon Monoxide Test
-            <select v-model="s.carbonMonoxideTest"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+            <combo-box v-model="s.carbonMonoxideTest" :options="OPT.pfn"></combo-box>
           </label>
           <label>Safe To Use
-            <select v-model="s.safeToUse"><option v-for="o in OPT.ynn" :key="o">{{o}}</option><option value="">--</option></select>
+            <combo-box v-model="s.safeToUse" :options="OPT.ynn"></combo-box>
           </label>
         </div>
       </div>
@@ -196,9 +194,8 @@
       <h3>Installation Details <span class="hint">(8 fixed checks)</span></h3>
       <div class="finding" v-for="item in rpt.installation" :key="item.order">
         <div class="finding-label">{{ item.order }}. {{ item.label }}<br><span class="hint">{{ item.description }}</span></div>
-        <div class="radio-row">
-          <label class="radio"><input type="radio" :name="'ins'+item.order" value="Pass" v-model="item.value"> Pass</label>
-          <label class="radio"><input type="radio" :name="'ins'+item.order" value="Fail" v-model="item.value"> Fail</label>
+        <div class="finding-combo">
+          <combo-box v-model="item.value" :options="OPT.passFail"></combo-box>
         </div>
       </div>
     </section>
@@ -208,19 +205,19 @@
       <h3>Mains</h3>
       <div class="grid2">
         <label>Type
-          <input v-model="rpt.mains.type" list="dl-mainstype">
+          <combo-box v-model="rpt.mains.type" :options="OPT.mainsTypes"></combo-box>
         </label>
         <label>Mains Entry Condition
-          <select v-model="rpt.mains.entryCondition"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.mains.entryCondition" :options="OPT.pfn"></combo-box>
         </label>
         <label>Supply
-          <input v-model="rpt.mains.supply" list="dl-supply">
+          <combo-box v-model="rpt.mains.supply" :options="OPT.supplyTypes"></combo-box>
         </label>
         <label>Size (Estimate)
-          <input v-model="rpt.mains.size" list="dl-mainssize">
+          <combo-box v-model="rpt.mains.size" :options="OPT.mainsSizes"></combo-box>
         </label>
         <label>Mains Cable Condition to Switchboard
-          <select v-model="rpt.mains.cableCondition"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.mains.cableCondition" :options="OPT.pfn"></combo-box>
         </label>
         <label>Main Switch Type
           <input v-model="rpt.mains.switchType" placeholder="Isolator">
@@ -230,16 +227,16 @@
       <h3 style="margin-top:20px">Main Earth</h3>
       <div class="grid2">
         <label>Type
-          <input v-model="rpt.mainEarth.type" list="dl-earthtype">
+          <combo-box v-model="rpt.mainEarth.type" :options="OPT.earthTypes"></combo-box>
         </label>
         <label>Condition of Connection
-          <select v-model="rpt.mainEarth.connectionCondition"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.mainEarth.connectionCondition" :options="OPT.pfn"></combo-box>
         </label>
         <label>Size (Estimate)
-          <input v-model="rpt.mainEarth.size" list="dl-mainssize">
+          <combo-box v-model="rpt.mainEarth.size" :options="OPT.mainsSizes"></combo-box>
         </label>
         <label>Earth Resistance Test
-          <select v-model="rpt.mainEarth.resistanceTest"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.mainEarth.resistanceTest" :options="OPT.pfn"></combo-box>
         </label>
         <label class="span2">Accessibility / Location
           <input v-model="rpt.mainEarth.location" placeholder="At group meter panel">
@@ -249,31 +246,31 @@
       <h3 style="margin-top:20px">Meter Board / Main Switchboard</h3>
       <div class="grid2">
         <label>RCD's Installed
-          <select v-model="rpt.switchboard.rcdInstalled"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.switchboard.rcdInstalled" :options="OPT.pfn"></combo-box>
         </label>
         <label>Earth Bar Present
-          <select v-model="rpt.switchboard.earthBar"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.switchboard.earthBar" :options="OPT.pfn"></combo-box>
         </label>
         <label>Fuses / Circuit Breakers Correctly Labelled
-          <select v-model="rpt.switchboard.fusesLabelled"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.switchboard.fusesLabelled" :options="OPT.pfn"></combo-box>
         </label>
         <label>MEN Link Present
-          <select v-model="rpt.switchboard.menLink"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.switchboard.menLink" :options="OPT.pfn"></combo-box>
         </label>
         <label>RCD Trip Test
-          <select v-model="rpt.switchboard.rcdTripTest"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.switchboard.rcdTripTest" :options="OPT.pfn"></combo-box>
         </label>
         <label>IP Rating / Fire Rating
-          <select v-model="rpt.switchboard.ipFireRating"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.switchboard.ipFireRating" :options="OPT.pfn"></combo-box>
         </label>
         <label>Polarity Test
-          <select v-model="rpt.switchboard.polarityTest"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.switchboard.polarityTest" :options="OPT.pfn"></combo-box>
         </label>
         <label>Overall Condition
-          <select v-model="rpt.switchboard.overallCondition"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.switchboard.overallCondition" :options="OPT.pfn"></combo-box>
         </label>
         <label>Final Sub Circuit Earth Resistance Test
-          <select v-model="rpt.switchboard.subCircuitEarthTest"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.switchboard.subCircuitEarthTest" :options="OPT.pfn"></combo-box>
         </label>
         <label>Location
           <input v-model="rpt.switchboard.location" placeholder="Near the front door">
@@ -320,19 +317,19 @@
           <input v-model="rpt.finalCircuits.cableType" placeholder="New TPS">
         </label>
         <label>Bare Earths Sleeved
-          <select v-model="rpt.finalCircuits.bareEarthsSleeved"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.finalCircuits.bareEarthsSleeved" :options="OPT.pfn"></combo-box>
         </label>
         <label>Condition of Insulation
-          <select v-model="rpt.finalCircuits.insulationCondition"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.finalCircuits.insulationCondition" :options="OPT.pfn"></combo-box>
         </label>
         <label>Rewiring Required
-          <select v-model="rpt.finalCircuits.rewiringRequired"><option v-for="o in OPT.ynn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.finalCircuits.rewiringRequired" :options="OPT.ynn"></combo-box>
         </label>
         <label>Cables Correctly Supported
-          <select v-model="rpt.finalCircuits.cablesSupported"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.finalCircuits.cablesSupported" :options="OPT.pfn"></combo-box>
         </label>
         <label>Number of Circuits to Rewire
-          <input v-model="rpt.finalCircuits.circuitsToRewire">
+          <combo-box v-model="rpt.finalCircuits.circuitsToRewire" :options="OPT.ynn"></combo-box>
         </label>
       </div>
     </section>
@@ -342,7 +339,7 @@
       <h3>Fittings</h3>
       <div class="grid2">
         <label v-for="f in ELEC_FITTINGS" :key="f.key">{{ f.label }}
-          <select v-model="rpt.fittings[f.key]"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+          <combo-box v-model="rpt.fittings[f.key]" :options="OPT.pfn"></combo-box>
         </label>
         <label class="span2">Other Fittings
           <input v-model="rpt.fittings.otherFittings">
@@ -409,7 +406,7 @@
         <div class="item-head">Smoke {{ i+1 }} <button class="btn danger small" @click="rpt.alarms.splice(i,1)">Remove</button></div>
         <div class="grid2">
           <label>Brand
-            <input v-model="a.brand" list="dl-brand">
+            <combo-box v-model="a.brand" :options="OPT.brands"></combo-box>
           </label>
           <label>Location
             <input v-model="a.location" placeholder="hallway">
@@ -440,16 +437,6 @@
       <button v-if="stepIdx<steps.length-1" class="btn primary" @click="stepIdx++">Next →</button>
       <button v-else class="btn primary" @click="doPreview" :disabled="busy">👁 Preview PDF</button>
     </div>
-
-    <datalist id="dl-gastype"><option v-for="o in OPT.gasTypes" :key="o" :value="o"></option></datalist>
-    <datalist id="dl-location"><option v-for="o in OPT.locations" :key="o" :value="o"></option></datalist>
-    <datalist id="dl-manu"><option v-for="o in OPT.manufacturers" :key="o" :value="o"></option></datalist>
-    <datalist id="dl-flue"><option v-for="o in OPT.flues" :key="o" :value="o"></option></datalist>
-    <datalist id="dl-brand"><option v-for="o in OPT.brands" :key="o" :value="o"></option></datalist>
-    <datalist id="dl-mainstype"><option v-for="o in OPT.mainsTypes" :key="o" :value="o"></option></datalist>
-    <datalist id="dl-earthtype"><option v-for="o in OPT.earthTypes" :key="o" :value="o"></option></datalist>
-    <datalist id="dl-supply"><option v-for="o in OPT.supplyTypes" :key="o" :value="o"></option></datalist>
-    <datalist id="dl-mainssize"><option v-for="o in OPT.mainsSizes" :key="o" :value="o"></option></datalist>
   </main>
 
   <!-- ===================== Preview ===================== -->
@@ -466,6 +453,6 @@
 </div>
 {% endverbatim %}
 <script src="{% static 'vendor/vue.global.prod.js' %}"></script>
-<script src="{% static 'app.js' %}?v=5"></script>
+<script src="{% static 'app.js' %}?v=6"></script>
 </body>
 </html>

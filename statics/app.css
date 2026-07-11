@@ -84,12 +84,28 @@ textarea { resize: vertical; }
 
 .finding { border-top: 1px solid var(--border); padding: 12px 0; display: flex; flex-direction: column; gap: 8px; }
 .finding-label { font-weight: 600; font-size: 14px; }
+.finding-combo { max-width: 240px; }
 
 .item-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 12px; background: #fafbfe; }
 .item-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; margin-bottom: 10px; font-size: 14px; }
 
 .photo-box { display: flex; gap: 12px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
 .photo-box img { width: 130px; height: 130px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); }
+
+.combo { position: relative; display: flex; }
+.combo input { flex: 1; padding-right: 32px; }
+.combo-btn {
+  position: absolute; right: 1px; top: 1px; bottom: 1px; width: 30px;
+  border: 0; background: transparent; cursor: pointer; color: #66708a; font-size: 12px;
+}
+.combo-list {
+  position: absolute; top: calc(100% + 3px); left: 0; right: 0; z-index: 30;
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  max-height: 220px; overflow-y: auto; box-shadow: 0 6px 18px rgba(20, 30, 60, .14);
+}
+.combo-item { padding: 8px 12px; cursor: pointer; font-size: 14px; }
+.combo-item:hover { background: #eef2fb; }
+.combo-item.sel { background: #e3ecff; font-weight: 600; }
 
 .date-au { display: flex; gap: 6px; align-items: center; position: relative; }
 .date-au .date-text { flex: 1; }

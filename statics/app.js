@@ -11,6 +11,8 @@ const OPT = {
     "Photoelectric", "Quell", "Tesla", "Trafalgar"],
   pfn: ["Pass", "Fail", "N/A"],
   ynn: ["Yes", "No", "N/A"],
+  passFail: ["Pass", "Fail"],
+  compliance: ["Compliant", "Non-Compliant"],
   mainsTypes: ["Cable", "Copper"],
   earthTypes: ["Cable", "Copper", "Other"],
   supplyTypes: ["Underground", "Overhead"],
@@ -383,6 +385,35 @@ async function api(path, opts = {}) {
 
 const { createApp } = Vue;
 
+/* ---------------- 可编辑下拉框：自由输入 + 全量备选（对齐模板的可编辑组合框） ---------------- */
+
+const ComboBox = {
+  props: {
+    modelValue: { default: "" },
+    options: { type: Array, default: () => [] },
+    placeholder: { type: String, default: "" },
+  },
+  emits: ["update:modelValue"],
+  data() { return { open: false }; },
+  methods: {
+    pick(o) { this.$emit("update:modelValue", o); this.open = false; },
+    onInput(e) { this.$emit("update:modelValue", e.target.value); },
+    close() { this._t = setTimeout(() => { this.open = false; }, 150); },
+  },
+  beforeUnmount() { clearTimeout(this._t); },
+  template: `
+    <div class="combo">
+      <input type="text" :value="modelValue" :placeholder="placeholder"
+             @input="onInput" @focus="open = true" @blur="close">
+      <button type="button" class="combo-btn" tabindex="-1"
+              @mousedown.prevent="open = !open">▾</button>
+      <div v-if="open && options.length" class="combo-list">
+        <div v-for="o in options" :key="o" class="combo-item"
+             :class="{ sel: o === modelValue }" @mousedown.prevent="pick(o)">{{ o }}</div>
+      </div>
+    </div>`,
+};
+
 const app = createApp({
   data() {
     return {
@@ -535,4 +566,5 @@ const app = createApp({
   },
 });
 app.component("date-au", DateAu);
+app.component("combo-box", ComboBox);
 app.mount("#app");
