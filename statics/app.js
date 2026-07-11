@@ -121,7 +121,7 @@ function newAlarm() {
 function toBackend(rpt) {
   const b = rpt.base;
   const baseInfo = {
-    type: rpt.type === "smoke" ? "Smoke" : "Gas",
+    type: rpt.type === "smoke" ? "Smoke" : (rpt.type === "electrical" ? "Electrical" : "Gas"),
     clientBranch: { agentName: b.agentName, branchAddress: b.branchAddress },
     referenceId: b.referenceId,
     rentalType: b.rentalType,
@@ -457,9 +457,10 @@ createApp({
         this.rpt = fromBackend(uid(), res.data);
         this.stepIdx = 0;
         this.view = "edit";
+        const label = this.rpt.type === "smoke" ? "Smoke Alarm" : (this.rpt.type === "electrical" ? "Electrical" : "Gas");
         this.say(res.source === "embedded"
-          ? "✅ Restored from data embedded in the PDF"
-          : "✅ Parsed PDF form fields — please review before exporting");
+          ? `✅ Restored ${label} report from embedded data`
+          : `✅ Imported as ${label} report — please review before exporting`);
       } catch (e) { this.say("Import failed: " + e.message, true); }
       finally { this.busy = false; }
     },

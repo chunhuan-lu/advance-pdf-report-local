@@ -468,10 +468,40 @@ def parse_template_pdf(file_obj, photo_saver):
         return None
     photos = _extract_field_photos(reader)
 
-    if fields.checked('smoke') or fields.has('smokebrand1'):
+    report_type = _detect_type(fields)
+    if report_type == 'smoke':
         return _parse_smoke(fields, photos, photo_saver)
-    if fields.checked('gas') or fields.has('gastype1'):
+    if report_type == 'gas':
         return _parse_gas(fields, photos, photo_saver)
-    if fields.checked('electrical') or fields.has('elecapp1'):
+    if report_type == 'electrical':
         return _parse_electrical(fields, photos, photo_saver)
     return None
+
+
+def _detect_type(fields: _Fields):
+    """判定模板类型。
+
+    优先看封面上 Gas / Electrical / Smoke 三个勾选框（恰好勾了一个即采信）。
+    勾选缺失或冲突时（例如三合一母版导出的 PDF 带着其他类型的空字段），
+    按"有实际值的特征字段"计分判定，避免只凭字段存在就误判。
+    """
+    ticked = [t for t in ('smoke', 'gas', 'electrical') if fields.checked(t)]
+    if len(ticked) == 1:
+        return ticked[0]
+
+    def score(keys):
+        return sum(1 for k in keys if fields.text(k))
+
+    scores = {
+        'smoke': score(['smokebrand1', 'smokebrand2', 'smokebrand3', 'smokelocation1',
+                        'smokelocation2', 'expiry1', 'expiry2', 'nextsmokecheckyear',
+                        'buildingclass']),
+        'gas': score(['gastype1', 'gastype2', 'gaslocation1', 'gasmanu1', 'gasmodel1',
+                      'kpa1', 'gasappl1', 'gasappl2']),
+        'electrical': score(['elecapp1', 'elecapp2', 'maintype', 'mainswitchtype',
+                             'cabletype', 'premises', 'switchlocation', 'earthlocation']),
+    }
+    best = max(scores, key=scores.get)
+    if scores[best] == 0 or sum(1 for v in scores.values() if v == scores[best]) > 1:
+        return None
+    return best
