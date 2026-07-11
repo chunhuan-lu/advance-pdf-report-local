@@ -91,6 +91,19 @@ textarea { resize: vertical; }
 .photo-box { display: flex; gap: 12px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
 .photo-box img { width: 130px; height: 130px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border); }
 
+.date-au { display: flex; gap: 6px; align-items: center; position: relative; }
+.date-au .date-text { flex: 1; }
+.date-au.invalid .date-text { border-color: var(--danger); }
+.cal-btn {
+  border: 1px solid var(--border); background: #fff; border-radius: 8px;
+  padding: 8px 10px; cursor: pointer; font-size: 14px; line-height: 1;
+}
+.cal-btn:hover { background: #eef2fb; }
+.date-native {
+  position: absolute; left: 0; bottom: 0; width: 1px; height: 1px;
+  opacity: 0; border: 0; padding: 0; pointer-events: none;
+}
+
 .step-nav { display: flex; justify-content: space-between; margin: 18px 0 40px; gap: 10px; }
 .step-nav .btn { flex: 1; text-align: center; }
 

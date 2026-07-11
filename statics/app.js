@@ -55,6 +55,74 @@ const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(
 const wrap = (value, label = "", options = []) => ({ value: value || "", label, options });
 const dateOnly = s => (typeof s === "string" && s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) ? s.slice(0, 10) : "";
 
+/* ---------------- 澳洲格式日期控件（DD/MM/YYYY，内部存 ISO） ---------------- */
+
+function isoToAu(iso) {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return "";
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  return `${d}/${m}/${y}`;
+}
+
+function auToIso(text) {
+  const s = String(text || "").trim();
+  if (!s) return "";
+  let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (!m && /^\d{8}$/.test(s)) m = [s, s.slice(0, 2), s.slice(2, 4), s.slice(4)];
+  if (!m) return null;
+  let d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
+  if (y < 100) y += 2000;
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+const DateAu = {
+  props: { modelValue: { type: String, default: "" } },
+  emits: ["update:modelValue"],
+  data() {
+    return { text: isoToAu(this.modelValue), invalid: false, hasPicker: true };
+  },
+  watch: {
+    modelValue(v) {
+      if (auToIso(this.text) !== (v || "")) {
+        this.text = isoToAu(v);
+        this.invalid = false;
+      }
+    },
+  },
+  methods: {
+    commit() {
+      const iso = auToIso(this.text);
+      if (iso === null) {
+        this.invalid = true;
+        this.$emit("update:modelValue", "");
+        return;
+      }
+      this.invalid = false;
+      this.text = isoToAu(iso);
+      this.$emit("update:modelValue", iso);
+    },
+    openPicker() {
+      const el = this.$refs.native;
+      try { el.showPicker(); } catch (e) { el.focus(); el.click(); }
+    },
+    onNative(e) {
+      const v = e.target.value || "";
+      this.text = isoToAu(v);
+      this.invalid = false;
+      this.$emit("update:modelValue", v);
+    },
+  },
+  template: `
+    <div class="date-au" :class="{ invalid }">
+      <input type="text" class="date-text" inputmode="numeric" placeholder="DD/MM/YYYY"
+             maxlength="10" v-model="text" @blur="commit" @keyup.enter="commit">
+      <button type="button" class="cal-btn" title="Pick a date" @click="openPicker">📅</button>
+      <input type="date" ref="native" class="date-native" :value="modelValue"
+             @change="onNative" tabindex="-1" aria-hidden="true">
+    </div>`,
+};
+
 /* ------------------------- 内部模型构造 ------------------------- */
 
 function newBase(type) {
@@ -315,7 +383,7 @@ async function api(path, opts = {}) {
 
 const { createApp } = Vue;
 
-createApp({
+const app = createApp({
   data() {
     return {
       view: "home", reports: [], rpt: null, stepIdx: 0,
@@ -465,4 +533,6 @@ createApp({
       finally { this.busy = false; }
     },
   },
-}).mount("#app");
+});
+app.component("date-au", DateAu);
+app.mount("#app");
