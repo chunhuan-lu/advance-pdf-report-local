@@ -30,7 +30,7 @@ body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; ba
 .btn.small { padding: 5px 10px; font-size: 12px; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
-.hero { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0 26px; }
+.hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 18px 0 26px; }
 .bigbtn {
   border: 2px dashed var(--border); border-radius: 14px; background: var(--card);
   padding: 26px 10px; font-size: 16px; font-weight: 600; text-align: center;
@@ -53,6 +53,7 @@ body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; ba
 .tag { padding: 3px 9px; border-radius: 20px; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
 .tag.gas { background: #e07020; }
 .tag.smoke { background: #c33; }
+.tag.electrical { background: #1f5eff; }
 
 .steps { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; }
 .step {
@@ -68,11 +69,12 @@ body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; ba
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
 .grid2 label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #444; }
 .grid2 .span2 { grid-column: span 2; }
-input, select {
+input, select, textarea {
   border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px;
-  font-size: 14px; width: 100%; background: #fff;
+  font-size: 14px; width: 100%; background: #fff; font-family: inherit;
 }
-input:focus, select:focus { outline: 2px solid #bcd0ff; border-color: var(--accent); }
+input:focus, select:focus, textarea:focus { outline: 2px solid #bcd0ff; border-color: var(--accent); }
+textarea { resize: vertical; }
 
 .radio-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; min-height: 38px; }
 .radio { display: flex; align-items: center; gap: 5px; font-size: 14px; flex-direction: row !important; }

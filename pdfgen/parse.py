@@ -323,6 +323,139 @@ def _parse_gas(fields: _Fields, photos: dict, photo_saver):
     }
 
 
+# ---------------------------------------------------------------- electrical
+
+_ELEC_OVERALL_FIELDS = [
+    ("compliantnoncompliantelec", "overalleleccompliant"),
+    ("recommelec", "overallelecrecomm"),
+    ("elecfaulty", "overallelecfaulty"),
+    ("elecsafety", "overallelecsafety"),
+    ("elecurgent", "overallelecurgent"),
+]
+
+
+def _parse_electrical(fields: _Fields, photos: dict, photo_saver):
+    inspected = _combine_date(fields.text('inspectiondate'), fields.text('inspectionyear'))
+    next_due = _combine_date(fields.text('inspectiondate'), fields.text('nextsafetycheckyear'))
+
+    overall_findings = []
+    for spec, (field_key, remark_key) in zip(constants.GAS_OVERALL_FINDINGS, _ELEC_OVERALL_FIELDS):
+        first = fields.radio_first(field_key, default=True)
+        overall_findings.append({
+            "label": spec["label"],
+            "options": spec["options"],
+            "tickedPos": spec["options"][0] if first else spec["options"][1],
+            "remark": fields.text(remark_key),
+        })
+
+    appliance_report = []
+    for i in range(1, 7):
+        title = fields.text(f'elecapp{i}')
+        photo = photos.get(f'electrical{i}')
+        if not (title or photo):
+            continue
+        compliant = True
+        if fields.checked(f'elecfail{i}') and not fields.checked(f'elecpass{i}'):
+            compliant = False
+        appliance_report.append({
+            "title": title,
+            "status": "Compliant" if compliant else "Non-Compliant",
+            "photoUrl": photo_saver(photo) if photo else "",
+        })
+
+    return {
+        "baseInfo": {
+            "type": "Electrical",
+            "clientBranch": {
+                "agentName": fields.text('clientname'),
+                "branchAddress": fields.text('clientaddress'),
+            },
+            "referenceId": fields.text('reference'),
+            "rentalType": "Rooming House" if fields.checked('rooming') else "Rental Property",
+            "propertyAddress": fields.text('property'),
+            "premisesDescription": fields.text('premises'),
+            "inspectedDate": inspected,
+            "nextCheckDue": next_due,
+            "inspector": {
+                "name": fields.text('electrician'),
+                "licenceNo": fields.text('electricianlicence'),
+            },
+            "company": {
+                "name": fields.text('ourcompany'),
+                "address": fields.text('ouraddress'),
+            },
+        },
+        "elecCheckDetails": {
+            "overallFindings": overall_findings,
+            "mains": {
+                "type": fields.text('maintype'),
+                "supply": fields.text('mainsupply'),
+                "size": fields.text('mainsize'),
+                "entryCondition": fields.text('passfailnamain'),
+                "cableCondition": fields.text('passfailnamaincond'),
+                "switchType": fields.text('mainswitchtype'),
+            },
+            "mainEarth": {
+                "type": fields.text('earthtype'),
+                # 模板里主接地 Size 与 MAINS Size 共用同一个表单域
+                "size": fields.text('mainsize'),
+                "connectionCondition": fields.text('passfailnaearthconnect'),
+                "resistanceTest": fields.text('passfailnaearthtest'),
+                "location": fields.text('earthlocation'),
+            },
+            "switchboard": {
+                "rcdInstalled": fields.text('passfailnaswitchrcd'),
+                "earthBar": fields.text('passfailnaswitchearth'),
+                "fusesLabelled": fields.text('passfailnaswitchlabel'),
+                "menLink": fields.text('passfailnaswitchmen'),
+                "rcdTripTest": fields.text('passfailnaswitchrcdtest'),
+                "ipFireRating": fields.text('passfailnaswitchipfire'),
+                "polarityTest": fields.text('passfailnaswitchpolarity'),
+                "overallCondition": fields.text('passfailnaswitchoverall'),
+                "subCircuitEarthTest": fields.text('passfailnaswitchcircuit'),
+                "location": fields.text('switchlocation'),
+            },
+            "distributionBoard": {
+                "present": fields.text('disboard'),
+                "submainCondition": fields.text('disboardsubmain'),
+                "fusesLabelled": fields.text('disboardlabel'),
+                "earthBar": fields.text('disboardearth'),
+                "mcbCount": fields.text('disboardmcb'),
+                "fusesCount": fields.text('disboardfuses'),
+                "rcdCount": fields.text('disboardrcd'),
+                "circuitsLabelled": "",  # 模板无独立字段
+                "overallCondition": fields.text('disboardoverall'),
+                "location": fields.text('disboardlocation'),
+            },
+            "finalCircuits": {
+                "cableType": fields.text('cabletype'),
+                "bareEarthsSleeved": fields.text('earthpassfailna'),
+                "insulationCondition": fields.text('cablecondipassfailna'),
+                "rewiringRequired": fields.text('rewiringynna'),
+                "cablesSupported": fields.text('cablesupportpassfailna'),
+                "circuitsToRewire": fields.text('norewiringynna'),
+            },
+            "fittings": {
+                "socketOutlets": fields.text('outletpassfailna'),
+                "extractFans": fields.text('fanspassfailna'),
+                "switches": fields.text('switchpassfailna'),
+                "wetAreasIp": fields.text('wetareapassfailna'),
+                "indoorLighting": fields.text('inlightpassfailna'),
+                "exteriorLighting": fields.text('exlightpassfailna'),
+                "hotWater": fields.text('hotwaterpassfailna'),
+                "heating": fields.text('heatingpassfailna'),
+                "rangehood": fields.text('rangehoodpassfailna'),
+                "oven": fields.text('ovenpassfailna'),
+                "otherFittings": fields.text('otherfittings'),
+                "garageShed": fields.text('garage'),
+            },
+            "urgentRepairs": fields.text('urgent'),
+            "observations": fields.text('observations'),
+            "applianceReport": appliance_report,
+        },
+    }
+
+
 # ---------------------------------------------------------------- entry
 
 def parse_template_pdf(file_obj, photo_saver):
@@ -339,6 +472,6 @@ def parse_template_pdf(file_obj, photo_saver):
         return _parse_smoke(fields, photos, photo_saver)
     if fields.checked('gas') or fields.has('gastype1'):
         return _parse_gas(fields, photos, photo_saver)
-    if fields.checked('electrical'):
-        raise ValueError("Electrical report import is not supported yet")
+    if fields.checked('electrical') or fields.has('elecapp1'):
+        return _parse_electrical(fields, photos, photo_saver)
     return None

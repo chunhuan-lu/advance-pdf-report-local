@@ -18,9 +18,10 @@ Photos, reports and the database all live on this machine under `local_store/`.
 
 ## Features
 
-- **New reports**: Gas (cover + certificate + service tables + photo pages) and
+- **New reports**: Gas (cover + certificate + service tables + photo pages),
   Smoke Alarm (cover + compliance certificate; unlimited alarms, grouped 3 per row
-  with automatic pagination)
+  with automatic pagination) and Electrical (cover + safety certificate + safety
+  services + fittings/notes + photo report; unlimited photo items)
 - **Photo upload**: one photo per slot; re-uploading replaces it
   (stored under a fixed `reportId/slotId` filename)
 - **Preview → Download**: preview streams PDF bytes without writing to disk;
@@ -31,7 +32,7 @@ Photos, reports and the database all live on this machine under `local_store/`.
   - PDFs exported by this tool embed the full JSON (`report_data.json` attachment)
     and restore losslessly
   - Legacy Word-template PDFs (AcroForm) are parsed from their form fields, with
-    embedded photos extracted (both the Gas and Smoke templates are supported)
+    embedded photos extracted (Gas, Smoke and Electrical templates are supported)
 
 ## Project layout
 
@@ -91,8 +92,6 @@ Note: keep requirements.txt / start.bat pure ASCII — on Chinese-locale Windows
 
 ## Known limits
 
-- Electrical reports are not implemented yet (out of v1 scope); generating or
-  importing one raises a clear error
 - Import only supports PDFs produced by this tool (embedded JSON) and the official
   Word-template AcroForm PDFs; scanned or flattened PDFs cannot be parsed
 - The local server has no authentication — use on this machine / trusted LAN only

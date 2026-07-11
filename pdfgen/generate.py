@@ -1,5 +1,6 @@
 import jmespath
 
+from pdfgen.electrical import generator as electrical_generator
 from pdfgen.gas import generator as gas_generator
 from pdfgen.smoke import generator as smoke_generator
 
@@ -12,5 +13,5 @@ def build_report_pdf(data: dict) -> bytes:
     if report_type in ('gas', ''):
         return gas_generator.build(data)
     if report_type == 'electrical':
-        raise ValueError("Electrical report is not supported yet")
+        return electrical_generator.build(data)
     raise ValueError(f"Unknown report type: {report_type}")

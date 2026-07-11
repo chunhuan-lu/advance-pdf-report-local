@@ -12,6 +12,11 @@ YES_NO_NA = ["Yes", "No", "N/A"]
 SMOKE_BRANDS = ["ANKA", "Clipsal", "Ionization", "Legrand", "Lifesaver", "Matelec",
                 "Photoelectric", "Quell", "Tesla", "Trafalgar"]
 
+ELEC_MAINS_TYPES = ["Cable", "Copper"]
+ELEC_EARTH_TYPES = ["Cable", "Copper", "Other"]
+ELEC_SUPPLY_TYPES = ["Underground", "Overhead"]
+ELEC_MAINS_SIZES = ["16mm", "25mm"]
+
 GAS_OVERALL_FINDINGS = [
     {"label": "Compliant / Non-Compliant", "options": ["Compliant", "Non-Compliant"]},
     {"label": "Recommendation", "options": ["N/A", "Yes"]},

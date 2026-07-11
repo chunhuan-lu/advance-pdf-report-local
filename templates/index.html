@@ -24,6 +24,7 @@
     <div class="hero">
       <button class="bigbtn gas" @click="newReport('gas')">🔥<br>New Gas Report</button>
       <button class="bigbtn smoke" @click="newReport('smoke')">🚨<br>New Smoke Alarm Report</button>
+      <button class="bigbtn electrical" @click="newReport('electrical')">💡<br>New Electrical Report</button>
       <label class="bigbtn import">
         📂<br>Import PDF to Edit
         <input type="file" accept="application/pdf" @change="importPdf" hidden>
@@ -34,7 +35,7 @@
     <div v-if="reports.length===0" class="empty">No reports yet — create one with the buttons above</div>
     <div class="report-card" v-for="r in reports" :key="r.id">
       <div class="report-info" @click="openReport(r.id)">
-        <span class="tag" :class="r.type">{{ r.type==='smoke' ? 'Smoke' : 'Gas' }}</span>
+        <span class="tag" :class="r.type">{{ r.type==='smoke' ? 'Smoke' : (r.type==='electrical' ? 'Elec' : 'Gas') }}</span>
         <div>
           <div class="report-addr">{{ r.propertyAddress || '(no address)' }}</div>
           <div class="report-meta">{{ r.referenceId || '(no reference)' }} · {{ fmtTime(r.updatedAt) }}</div>
@@ -80,6 +81,9 @@
         <label v-if="rpt.type==='smoke'">Building Class
           <input v-model="rpt.base.buildingClass" placeholder="Class 1a">
         </label>
+        <label v-if="rpt.type==='electrical'">Description of Premises
+          <input v-model="rpt.base.premisesDescription" placeholder="Domestic">
+        </label>
         <label>Inspected Date
           <input type="date" v-model="rpt.base.inspectedDate">
         </label>
@@ -92,7 +96,7 @@
         <label>Licence No.
           <input v-model="rpt.base.inspectorLicence">
         </label>
-        <template v-if="rpt.type==='smoke'">
+        <template v-if="rpt.type==='smoke' || rpt.type==='electrical'">
           <label>Company
             <input v-model="rpt.base.companyName">
           </label>
@@ -103,8 +107,8 @@
       </div>
     </section>
 
-    <!-- ============ GAS: Overall Findings ============ -->
-    <section v-if="rpt.type==='gas'" v-show="curStep==='Overall Findings'" class="card">
+    <!-- ============ GAS + ELECTRICAL: Overall Findings ============ -->
+    <section v-if="rpt.type==='gas' || rpt.type==='electrical'" v-show="curStep==='Overall Findings'" class="card">
       <h3>Overall Findings</h3>
       <div class="finding" v-for="(f,i) in rpt.overall" :key="i">
         <div class="finding-label">{{ f.label.replace('\n',' ') }}</div>
@@ -199,14 +203,169 @@
       </div>
     </section>
 
-    <!-- ============ GAS: Photo Report ============ -->
-    <section v-if="rpt.type==='gas'" v-show="curStep==='Photo Report'" class="card">
-      <h3>Gas Appliance Report <span class="hint">(one photo per item; re-upload replaces it)</span></h3>
+    <!-- ============ ELECTRICAL: Safety Services ============ -->
+    <section v-if="rpt.type==='electrical'" v-show="curStep==='Safety Services'" class="card">
+      <h3>Mains</h3>
+      <div class="grid2">
+        <label>Type
+          <input v-model="rpt.mains.type" list="dl-mainstype">
+        </label>
+        <label>Mains Entry Condition
+          <select v-model="rpt.mains.entryCondition"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Supply
+          <input v-model="rpt.mains.supply" list="dl-supply">
+        </label>
+        <label>Size (Estimate)
+          <input v-model="rpt.mains.size" list="dl-mainssize">
+        </label>
+        <label>Mains Cable Condition to Switchboard
+          <select v-model="rpt.mains.cableCondition"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Main Switch Type
+          <input v-model="rpt.mains.switchType" placeholder="Isolator">
+        </label>
+      </div>
+
+      <h3 style="margin-top:20px">Main Earth</h3>
+      <div class="grid2">
+        <label>Type
+          <input v-model="rpt.mainEarth.type" list="dl-earthtype">
+        </label>
+        <label>Condition of Connection
+          <select v-model="rpt.mainEarth.connectionCondition"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Size (Estimate)
+          <input v-model="rpt.mainEarth.size" list="dl-mainssize">
+        </label>
+        <label>Earth Resistance Test
+          <select v-model="rpt.mainEarth.resistanceTest"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label class="span2">Accessibility / Location
+          <input v-model="rpt.mainEarth.location" placeholder="At group meter panel">
+        </label>
+      </div>
+
+      <h3 style="margin-top:20px">Meter Board / Main Switchboard</h3>
+      <div class="grid2">
+        <label>RCD's Installed
+          <select v-model="rpt.switchboard.rcdInstalled"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Earth Bar Present
+          <select v-model="rpt.switchboard.earthBar"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Fuses / Circuit Breakers Correctly Labelled
+          <select v-model="rpt.switchboard.fusesLabelled"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>MEN Link Present
+          <select v-model="rpt.switchboard.menLink"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>RCD Trip Test
+          <select v-model="rpt.switchboard.rcdTripTest"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>IP Rating / Fire Rating
+          <select v-model="rpt.switchboard.ipFireRating"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Polarity Test
+          <select v-model="rpt.switchboard.polarityTest"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Overall Condition
+          <select v-model="rpt.switchboard.overallCondition"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Final Sub Circuit Earth Resistance Test
+          <select v-model="rpt.switchboard.subCircuitEarthTest"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Location
+          <input v-model="rpt.switchboard.location" placeholder="Near the front door">
+        </label>
+      </div>
+
+      <h3 style="margin-top:20px">Distribution Board</h3>
+      <div class="grid2">
+        <label>Distribution Board Present
+          <input v-model="rpt.distributionBoard.present" placeholder="Yes / No">
+        </label>
+        <label>Submain Switch Condition
+          <input v-model="rpt.distributionBoard.submainCondition" placeholder="N/A">
+        </label>
+        <label>Fuses / MCB's Correctly Labelled
+          <input v-model="rpt.distributionBoard.fusesLabelled">
+        </label>
+        <label>Earth Bar Present
+          <input v-model="rpt.distributionBoard.earthBar">
+        </label>
+        <label>Number of MCB
+          <input v-model="rpt.distributionBoard.mcbCount">
+        </label>
+        <label>Circuits Labelled
+          <input v-model="rpt.distributionBoard.circuitsLabelled">
+        </label>
+        <label>Number of Fuses
+          <input v-model="rpt.distributionBoard.fusesCount">
+        </label>
+        <label>Overall Condition
+          <input v-model="rpt.distributionBoard.overallCondition">
+        </label>
+        <label>Number of RCD / RCBO
+          <input v-model="rpt.distributionBoard.rcdCount">
+        </label>
+        <label>Location
+          <input v-model="rpt.distributionBoard.location">
+        </label>
+      </div>
+
+      <h3 style="margin-top:20px">Final Circuit Cables</h3>
+      <div class="grid2">
+        <label>Final Circuit Cable Type
+          <input v-model="rpt.finalCircuits.cableType" placeholder="New TPS">
+        </label>
+        <label>Bare Earths Sleeved
+          <select v-model="rpt.finalCircuits.bareEarthsSleeved"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Condition of Insulation
+          <select v-model="rpt.finalCircuits.insulationCondition"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Rewiring Required
+          <select v-model="rpt.finalCircuits.rewiringRequired"><option v-for="o in OPT.ynn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Cables Correctly Supported
+          <select v-model="rpt.finalCircuits.cablesSupported"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label>Number of Circuits to Rewire
+          <input v-model="rpt.finalCircuits.circuitsToRewire">
+        </label>
+      </div>
+    </section>
+
+    <!-- ============ ELECTRICAL: Fittings & Notes ============ -->
+    <section v-if="rpt.type==='electrical'" v-show="curStep==='Fittings & Notes'" class="card">
+      <h3>Fittings</h3>
+      <div class="grid2">
+        <label v-for="f in ELEC_FITTINGS" :key="f.key">{{ f.label }}
+          <select v-model="rpt.fittings[f.key]"><option v-for="o in OPT.pfn" :key="o">{{o}}</option><option value="">--</option></select>
+        </label>
+        <label class="span2">Other Fittings
+          <input v-model="rpt.fittings.otherFittings">
+        </label>
+        <label class="span2">Garage / Shed
+          <input v-model="rpt.fittings.garageShed">
+        </label>
+      </div>
+      <h3 style="margin-top:20px">Urgent Repairs</h3>
+      <textarea v-model="rpt.urgentRepairs" rows="4" placeholder="Leave empty if none"></textarea>
+      <h3 style="margin-top:20px">Observations</h3>
+      <textarea v-model="rpt.observations" rows="4" placeholder="Leave empty if none"></textarea>
+    </section>
+
+    <!-- ============ GAS + ELECTRICAL: Photo Report ============ -->
+    <section v-if="rpt.type==='gas' || rpt.type==='electrical'" v-show="curStep==='Photo Report'" class="card">
+      <h3>{{ rpt.type==='gas' ? 'Gas Appliance Report' : 'Electrical Appliance Report' }}
+        <span class="hint">(one photo per item; re-upload replaces it)</span></h3>
       <div class="item-card" v-for="(p,i) in rpt.photoBlocks" :key="p.slotId">
         <div class="item-head">Photo Item {{ i+1 }} <button class="btn danger small" @click="rpt.photoBlocks.splice(i,1)">Remove</button></div>
         <div class="grid2">
           <label>Title (appliance)
-            <input v-model="p.title" placeholder="Cooktop / Gas meter ...">
+            <input v-model="p.title" :placeholder="rpt.type==='gas' ? 'Cooktop / Gas meter ...' : 'switch board / power ...'">
           </label>
           <label>Result
             <div class="radio-row">
@@ -214,7 +373,7 @@
               <label class="radio"><input type="radio" :name="'pb'+p.slotId" value="Non-Compliant" v-model="p.status"> Non-Compliant</label>
             </div>
           </label>
-          <label class="span2">Remark
+          <label class="span2" v-if="rpt.type==='gas'">Remark
             <input v-model="p.remark">
           </label>
         </div>
@@ -287,6 +446,10 @@
     <datalist id="dl-manu"><option v-for="o in OPT.manufacturers" :key="o" :value="o"></option></datalist>
     <datalist id="dl-flue"><option v-for="o in OPT.flues" :key="o" :value="o"></option></datalist>
     <datalist id="dl-brand"><option v-for="o in OPT.brands" :key="o" :value="o"></option></datalist>
+    <datalist id="dl-mainstype"><option v-for="o in OPT.mainsTypes" :key="o" :value="o"></option></datalist>
+    <datalist id="dl-earthtype"><option v-for="o in OPT.earthTypes" :key="o" :value="o"></option></datalist>
+    <datalist id="dl-supply"><option v-for="o in OPT.supplyTypes" :key="o" :value="o"></option></datalist>
+    <datalist id="dl-mainssize"><option v-for="o in OPT.mainsSizes" :key="o" :value="o"></option></datalist>
   </main>
 
   <!-- ===================== Preview ===================== -->

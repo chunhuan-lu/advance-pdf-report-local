@@ -11,6 +11,10 @@ const OPT = {
     "Photoelectric", "Quell", "Tesla", "Trafalgar"],
   pfn: ["Pass", "Fail", "N/A"],
   ynn: ["Yes", "No", "N/A"],
+  mainsTypes: ["Cable", "Copper"],
+  earthTypes: ["Cable", "Copper", "Other"],
+  supplyTypes: ["Underground", "Overhead"],
+  mainsSizes: ["16mm", "25mm"],
 };
 
 const OVERALL_SPECS = [
@@ -34,6 +38,19 @@ const INSTALLATION_ITEMS = [
 
 const DEFAULT_COMPANY = { name: "Advance Essential Services", address: "Unit 56/31 Norcal Rd, Nunawading" };
 
+const ELEC_FITTINGS = [
+  { key: "socketOutlets", label: "Socket Outlets" },
+  { key: "extractFans", label: "Extract Fans" },
+  { key: "switches", label: "Switches" },
+  { key: "wetAreasIp", label: "Wet Areas IP Rating" },
+  { key: "indoorLighting", label: "Indoor Lighting" },
+  { key: "exteriorLighting", label: "Exterior Lighting" },
+  { key: "hotWater", label: "Hot Water" },
+  { key: "heating", label: "Heating" },
+  { key: "rangehood", label: "Rangehood" },
+  { key: "oven", label: "Oven" },
+];
+
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 const wrap = (value, label = "", options = []) => ({ value: value || "", label, options });
 const dateOnly = s => (typeof s === "string" && s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) ? s.slice(0, 10) : "";
@@ -46,7 +63,23 @@ function newBase(type) {
     propertyAddress: "", inspectedDate: "", nextCheckDue: "",
     inspectorName: "", inspectorLicence: "",
     buildingClass: type === "smoke" ? "Class 1a" : "",
+    premisesDescription: type === "electrical" ? "Domestic" : "",
     companyName: DEFAULT_COMPANY.name, companyAddress: DEFAULT_COMPANY.address,
+  };
+}
+
+function newElectrical(id) {
+  return {
+    id, type: "electrical", base: newBase("electrical"),
+    overall: OVERALL_SPECS.map(s => ({ ...s, ticked: s.options[0], remark: "" })),
+    mains: { type: "Cable", supply: "Underground", size: "16mm", entryCondition: "Pass", cableCondition: "Pass", switchType: "" },
+    mainEarth: { type: "Cable", size: "16mm", connectionCondition: "Pass", resistanceTest: "Pass", location: "" },
+    switchboard: { rcdInstalled: "Pass", earthBar: "Pass", fusesLabelled: "Pass", menLink: "Pass", rcdTripTest: "Pass", ipFireRating: "Pass", polarityTest: "Pass", overallCondition: "Pass", subCircuitEarthTest: "Pass", location: "" },
+    distributionBoard: { present: "", submainCondition: "", fusesLabelled: "", earthBar: "", mcbCount: "", circuitsLabelled: "", fusesCount: "", overallCondition: "", rcdCount: "", location: "" },
+    finalCircuits: { cableType: "", bareEarthsSleeved: "", insulationCondition: "Pass", rewiringRequired: "No", cablesSupported: "Pass", circuitsToRewire: "" },
+    fittings: { socketOutlets: "Pass", extractFans: "Pass", switches: "Pass", wetAreasIp: "Pass", indoorLighting: "Pass", exteriorLighting: "Pass", hotWater: "Pass", heating: "Pass", rangehood: "Pass", oven: "Pass", otherFittings: "", garageShed: "" },
+    urgentRepairs: "", observations: "",
+    photoBlocks: [newPhotoBlock()],
   };
 }
 
@@ -97,6 +130,29 @@ function toBackend(rpt) {
     nextCheckDue: b.nextCheckDue,
     inspector: { id: "1", name: b.inspectorName, licenceNo: b.inspectorLicence },
   };
+  if (rpt.type === "electrical") {
+    baseInfo.premisesDescription = b.premisesDescription;
+    baseInfo.company = { name: b.companyName, address: b.companyAddress };
+    return {
+      baseInfo,
+      elecCheckDetails: {
+        overallFindings: rpt.overall.map(f => ({
+          label: f.label, options: f.options, tickedPos: f.ticked, remark: f.remark,
+        })),
+        mains: { ...rpt.mains },
+        mainEarth: { ...rpt.mainEarth },
+        switchboard: { ...rpt.switchboard },
+        distributionBoard: { ...rpt.distributionBoard },
+        finalCircuits: { ...rpt.finalCircuits },
+        fittings: { ...rpt.fittings },
+        urgentRepairs: rpt.urgentRepairs,
+        observations: rpt.observations,
+        applianceReport: rpt.photoBlocks
+          .filter(p => p.title || p.photoUrl)
+          .map(p => ({ title: p.title, status: p.status, photoUrl: p.photoUrl })),
+      },
+    };
+  }
   if (rpt.type === "smoke") {
     baseInfo.buildingClass = b.buildingClass;
     baseInfo.company = { name: b.companyName, address: b.companyAddress };
@@ -161,8 +217,9 @@ function toBackend(rpt) {
 
 function fromBackend(id, data) {
   const bi = data.baseInfo || {};
-  const type = (bi.type || "gas").toLowerCase().startsWith("smoke") ? "smoke" : "gas";
-  const rpt = type === "smoke" ? newSmoke(id) : newGas(id);
+  const t = (bi.type || "gas").toLowerCase();
+  const type = t.startsWith("smoke") ? "smoke" : (t === "electrical" ? "electrical" : "gas");
+  const rpt = type === "smoke" ? newSmoke(id) : (type === "electrical" ? newElectrical(id) : newGas(id));
   const cb = bi.clientBranch || {};
   const insp = bi.inspector || {};
   const comp = bi.company || {};
@@ -173,9 +230,29 @@ function fromBackend(id, data) {
     inspectedDate: dateOnly(bi.inspectedDate), nextCheckDue: dateOnly(bi.nextCheckDue),
     inspectorName: insp.name || "", inspectorLicence: insp.licenceNo || "",
     buildingClass: bi.buildingClass || rpt.base.buildingClass,
+    premisesDescription: bi.premisesDescription || rpt.base.premisesDescription,
     companyName: comp.name || DEFAULT_COMPANY.name,
     companyAddress: comp.address || DEFAULT_COMPANY.address,
   });
+
+  if (type === "electrical") {
+    const d = data.elecCheckDetails || {};
+    const findings = d.overallFindings || [];
+    rpt.overall = OVERALL_SPECS.map((spec, i) => {
+      const f = findings[i] || {};
+      return { ...spec, ticked: f.tickedPos || spec.options[0], remark: f.remark || "" };
+    });
+    ["mains", "mainEarth", "switchboard", "distributionBoard", "finalCircuits", "fittings"]
+      .forEach(k => { Object.assign(rpt[k], d[k] || {}); });
+    rpt.urgentRepairs = d.urgentRepairs || "";
+    rpt.observations = d.observations || "";
+    rpt.photoBlocks = (d.applianceReport || []).map(p => ({
+      slotId: uid(), title: p.title || "", status: p.status || "Compliant",
+      remark: "", photoUrl: p.photoUrl || "",
+    }));
+    if (!rpt.photoBlocks.length) rpt.photoBlocks = [newPhotoBlock()];
+    return rpt;
+  }
 
   if (type === "smoke") {
     const d = data.smokeCheckDetails || {};
@@ -243,15 +320,16 @@ createApp({
     return {
       view: "home", reports: [], rpt: null, stepIdx: 0,
       previewUrl: "", busy: false, toast: "", toastType: "", imgBust: Date.now(),
-      OPT,
+      OPT, ELEC_FITTINGS,
     };
   },
   computed: {
     steps() {
       if (!this.rpt) return [];
-      return this.rpt.type === "smoke"
-        ? ["Basic Info", "Declarations", "Smoke Alarms"]
-        : ["Basic Info", "Overall Findings", "Appliances", "Service & Inspection", "Installation", "Photo Report"];
+      if (this.rpt.type === "smoke") return ["Basic Info", "Declarations", "Smoke Alarms"];
+      if (this.rpt.type === "electrical")
+        return ["Basic Info", "Overall Findings", "Safety Services", "Fittings & Notes", "Photo Report"];
+      return ["Basic Info", "Overall Findings", "Appliances", "Service & Inspection", "Installation", "Photo Report"];
     },
     curStep() { return this.steps[this.stepIdx] || ""; },
   },
@@ -271,7 +349,8 @@ createApp({
       catch (e) { this.say("Failed to load reports: " + e.message, true); }
     },
     newReport(type) {
-      this.rpt = type === "smoke" ? newSmoke(uid()) : newGas(uid());
+      this.rpt = type === "smoke" ? newSmoke(uid())
+        : (type === "electrical" ? newElectrical(uid()) : newGas(uid()));
       this.stepIdx = 0;
       this.view = "edit";
     },
