@@ -6,3 +6,5 @@ local_store/
 .vscode/
 *.log
 data/
+.app_version
+start.bat.new

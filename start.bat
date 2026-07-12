@@ -9,6 +9,18 @@ set "VENV=.venv\Scripts\python.exe"
 
 if not exist "local_store" mkdir "local_store"
 
+REM ---- finish a launcher update staged by a previous run ----
+if exist "start.bat.new" (move /y "start.bat.new" "start.bat" >nul & start "" "%~f0" & exit)
+
+REM ---- auto-update to the latest version (needs internet; skipped on git working copies) ----
+if exist ".git" (
+    echo [INFO] Git working copy detected - auto-update skipped.
+    goto pysetup
+)
+if exist "update.ps1" powershell -NoProfile -ExecutionPolicy Bypass -File "update.ps1"
+if exist "start.bat.new" (move /y "start.bat.new" "start.bat" >nul & start "" "%~f0" & exit)
+
+:pysetup
 if exist "%VENV%" goto deps
 
 call :findpy

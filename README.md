@@ -8,10 +8,16 @@ Photos, reports and the database all live on this machine under `local_store/`.
 
 **Double-click `start.bat`.** It will automatically:
 
-1. Find Python 3.10+ (if missing, install 3.12 via winget or the python.org installer)
-2. Create a virtual environment and install dependencies (first run needs internet;
+1. Self-update to the latest version from GitHub (no git client needed — it
+   downloads the repo zip; offline or on failure it just starts the current
+   version; skipped on developer checkouts that contain `.git`)
+2. Find Python 3.10+ (if missing, install 3.12 via winget or the python.org installer)
+3. Create a virtual environment and install dependencies (first run needs internet;
    falls back to the Tsinghua PyPI mirror if the default index fails)
-3. Initialize the database, start the server and open `http://127.0.0.1:8000`
+4. Initialize the database, start the server and open `http://127.0.0.1:8000`
+
+Runtime data (`local_store/`, local `data/` templates, the venv) is never touched
+by updates.
 
 **Phone access:** join the same Wi-Fi as the PC, then open the
 `http://<PC-IP>:8000` address shown in the launcher window.
