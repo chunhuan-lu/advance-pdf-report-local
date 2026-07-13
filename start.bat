@@ -7,6 +7,19 @@ setlocal
 cd /d "%~dp0"
 set "VENV=.venv\Scripts\python.exe"
 
+REM ---- refuse to run from inside a ZIP preview (Explorer extracts only this bat to Temp) ----
+set "HERE=%~dp0"
+set "NOTMP=%HERE:AppData\Local\Temp=%"
+if not "%NOTMP%"=="%HERE%" (
+    echo.
+    echo [ERROR] It looks like start.bat was started from inside a ZIP file.
+    echo         Right-click the ZIP, choose "Extract All...", then open the
+    echo         extracted folder and double-click start.bat there.
+    echo.
+    pause
+    exit
+)
+
 if not exist "local_store" mkdir "local_store"
 
 REM ---- finish a launcher update staged by a previous run ----
@@ -14,8 +27,12 @@ if exist "start.bat.new" (move /y "start.bat.new" "start.bat" >nul & start "" "%
 
 REM ---- auto-update to the latest version (needs internet; skipped on git working copies) ----
 if exist ".git" (
-    echo [INFO] Git working copy detected - auto-update skipped.
-    goto pysetup
+    where git >nul 2>&1
+    if not errorlevel 1 (
+        echo [INFO] Git working copy detected - auto-update skipped.
+        goto pysetup
+    )
+    echo [WARN] Found a .git folder but no git client - treating this as a normal install.
 )
 if not exist "update.ps1" (
     echo [INFO] First-time setup - downloading the updater ...
@@ -35,7 +52,12 @@ if not exist "requirements.txt" (
 )
 
 :pysetup
-if exist "%VENV%" goto deps
+if exist "%VENV%" (
+    "%VENV%" -c "pass" >nul 2>&1
+    if not errorlevel 1 goto deps
+    echo [WARN] Existing virtual environment is broken - recreating it ...
+    rmdir /s /q ".venv"
+)
 
 call :findpy
 if defined PY goto venv
