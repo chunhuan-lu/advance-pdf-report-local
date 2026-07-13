@@ -17,8 +17,22 @@ if exist ".git" (
     echo [INFO] Git working copy detected - auto-update skipped.
     goto pysetup
 )
+if not exist "update.ps1" (
+    echo [INFO] First-time setup - downloading the updater ...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/chunhuan-lu/advance-pdf-report-local/master/update.ps1' -OutFile 'update.ps1' -TimeoutSec 60"
+)
 if exist "update.ps1" powershell -NoProfile -ExecutionPolicy Bypass -File "update.ps1"
 if exist "start.bat.new" (move /y "start.bat.new" "start.bat" >nul & start "" "%~f0" & exit)
+
+if not exist "requirements.txt" (
+    echo.
+    echo [ERROR] Application files are missing and could not be downloaded.
+    echo         Please check your internet connection and double-click
+    echo         start.bat again, or copy the full application folder
+    echo         onto this computer.
+    pause
+    exit
+)
 
 :pysetup
 if exist "%VENV%" goto deps
